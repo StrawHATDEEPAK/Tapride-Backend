@@ -1,0 +1,9 @@
+**/target/
+**/build/
+.git/
+.idea/
+*.iml
+.mvn/
+docs/
+infra/
+*.md
