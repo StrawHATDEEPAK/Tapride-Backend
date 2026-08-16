@@ -50,7 +50,7 @@ management:
         http.server.requests: true
   tracing:
     sampling:
-      probability: 0.0   # sample everything for the demo; dial down in a "real" prod profile
+      probability: 0.0  # sample everything for the demo; dial down in a "real" prod profile
   otlp:
     tracing:
       endpoint: http://localhost:4318/v1/traces

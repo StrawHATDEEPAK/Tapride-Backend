@@ -16,10 +16,12 @@ built around a ride-booking domain.
       across services via `<dependencyManagement>`, deliberately NOT a multi-module reactor
       (no `<modules>` list), so each service stays independently buildable/deployable
 - [x] `order-service`: ride domain model, state machine, event log (event-sourcing-lite),
-      REST API, Kafka producer (transactional-outbox-simplified pattern), saga listener stubs
-- [ ] Day 2: `payment-service` + saga orchestration wired end-to-end
-- [ ] Day 3: `matching-service` + Redis geospatial matching
-- [ ] Day 4: Resilience4j circuit breakers + `/chaos` endpoint + Testcontainers integration tests
+      REST API, Kafka producer (transactional-outbox-simplified pattern), saga listener stubs,
+      Haversine-based mock fare estimation
+- [x] `payment-service`: mock payment authorization/refund, saga participant pattern,
+      chaos-injectable failures (`/api/chaos`) for demoing the saga's compensation path
+- [ ] Day 3: `matching-service` + Redis geospatial matching + `DRIVER_LOCATION_UPDATED` ticks
+- [ ] Day 4: Resilience4j circuit breakers + `/chaos` endpoint polish + Testcontainers integration tests
 - [ ] Day 5: Observability stack (Prometheus/Grafana/Jaeger, correlated logs)
 - [ ] Day 6: Frontend — live order feed via WebSocket + chaos button
 - [ ] Day 7: CI/CD, README polish, demo recording
@@ -61,6 +63,60 @@ delivery).
 
 ---
 
+## The saga event contract (order-service ↔ payment-service)
+
+Both services publish plain, class-agnostic JSON to Kafka — deliberately not a
+shared Java DTO library — so each service can evolve its internals without
+breaking the other. The contract is just field names on the wire:
+
+**order-service publishes to `tapride.ride.events`** (its own event log, which
+doubles as its outbound commands):
+```json
+{"eventId": "...", "rideId": "...", "eventType": "PAYMENT_AUTHORIZATION_REQUESTED",
+ "payloadJson": "{\"rideId\":\"...\",\"estimatedFare\":12.34}", "correlationId": "...", "occurredAt": "..."}
+```
+
+**payment-service consumes that topic**, filters for `PAYMENT_AUTHORIZATION_REQUESTED`
+and `PAYMENT_REFUND_REQUESTED`, and ignores everything else (RIDE_REQUESTED,
+DRIVER_MATCHED, etc. — those aren't addressed to it).
+
+**payment-service publishes to `tapride.payment.events`**:
+```json
+{"type": "PAYMENT_AUTHORIZED", "rideId": "...", "correlationId": "...", "amount": 12.34}
+{"type": "PAYMENT_FAILED", "rideId": "...", "correlationId": "...", "reason": "mock_gateway_declined", "amount": 12.34}
+```
+
+**order-service's `SagaEventListener` consumes that topic** and drives the ride
+state machine forward or into compensation accordingly.
+
+`matching-service` (Day 3) will follow the identical pattern on `tapride.matching.events`.
+
+---
+
+## Demoing the saga's failure path (chaos injection)
+
+`payment-service` exposes a live chaos control surface — this is the "senior
+engineer" moment of the demo, showing the saga's compensation logic actually work:
+
+```bash
+# Force every payment to fail (guaranteed, repeatable demo)
+curl -X PUT http://localhost:8082/api/chaos -H "Content-Type: application/json" -d '{"forceFailure": true}'
+
+# Create a ride while chaos is on -> watch it go PAYMENT_PENDING -> CANCELLED
+curl -X POST http://localhost:8081/api/rides -H "Content-Type: application/json" \
+  -d '{"riderId":"11111111-1111-1111-1111-111111111111","pickupLat":22.72,"pickupLng":75.86,"dropoffLat":22.75,"dropoffLng":75.90}'
+
+# Check the ride's full event log - you'll see RIDE_REQUESTED, RIDE_VALIDATED,
+# PAYMENT_AUTHORIZATION_REQUESTED, then (from order-service's saga listener
+# reacting to payment-service's PAYMENT_FAILED) PAYMENT_FAILED, RIDE_CANCELLED
+curl http://localhost:8081/api/rides/{id}/events
+
+# Reset back to normal (15% random failure rate, no forced failures)
+curl -X POST http://localhost:8082/api/chaos/reset
+```
+
+---
+
 ## Build locally
 
 Each service is built independently, referencing the shared parent POM at the
@@ -71,16 +127,21 @@ cd order-service
 mvn clean verify
 ```
 
-## Running via Docker (once payment/matching services exist — Day 2+)
+## Running via Docker
 
-Note: order-service's Docker build context is the **repo root** (not
-`order-service/`), since it needs access to the parent `pom.xml`. This is
-already configured in `docker-compose.yml` — just run:
+Note: each service's Docker build context is the **repo root** (not the
+service's own folder), since every service inherits the parent `pom.xml`.
+This is already configured in `docker-compose.yml` — just run:
 
 ```bash
 docker compose up -d order-db payment-db matching-db redis kafka kafka-ui
-docker compose up --build order-service
+docker compose up --build order-service payment-service
 ```
+
+- order-service: http://localhost:8081
+- payment-service: http://localhost:8082
+- Kafka UI: http://localhost:8090 (watch `tapride.ride.events` and
+  `tapride.payment.events` fill up as rides move through the saga)
 
 - Kafka UI: http://localhost:8090
 - order-service: http://localhost:8081/api/rides
