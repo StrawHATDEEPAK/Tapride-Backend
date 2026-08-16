@@ -27,6 +27,7 @@ public class RideService {
     private final RideStateMachine stateMachine;
     private final RideEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final FareEstimator fareEstimator;
 
     @Transactional
     public Ride requestRide(UUID riderId, double pickupLat, double pickupLng,
@@ -43,9 +44,15 @@ public class RideService {
         // become its own async saga stage later (e.g. fraud checks, rider standing).
         boolean valid = isValidRoute(pickupLat, pickupLng, dropoffLat, dropoffLng);
         if (valid) {
+            var estimatedFare = fareEstimator.estimate(pickupLat, pickupLng, dropoffLat, dropoffLng);
+            ride.setFare(estimatedFare);
+            rideRepository.save(ride);
+
             transition(ride, RideStatus.VALIDATED, RideEventType.RIDE_VALIDATED, correlationId, Map.of());
+            // Carries the estimated fare so payment-service has an amount to authorize
+            // against without needing to know anything about ride geography itself.
             transition(ride, RideStatus.PAYMENT_PENDING, RideEventType.PAYMENT_AUTHORIZATION_REQUESTED,
-                    correlationId, Map.of("rideId", ride.getId()));
+                    correlationId, Map.of("rideId", ride.getId(), "estimatedFare", estimatedFare));
         } else {
             transition(ride, RideStatus.VALIDATION_FAILED, RideEventType.RIDE_VALIDATION_FAILED,
                     correlationId, Map.of("reason", "pickup and dropoff must differ"));

@@ -32,6 +32,12 @@ public class KafkaConfig {
         // saga steps are triggered by these events and must not double-fire.
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
+        // Don't add a "__TypeId__" header with order-service's internal Java class
+        // name. Other services (payment-service, matching-service) parse these
+        // messages as plain JSON and have no knowledge of order-service's types -
+        // keeping the wire format class-agnostic is what actually decouples the
+        // services, not just having separate codebases.
+        config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
         return new DefaultKafkaProducerFactory<>(config);
     }
 
