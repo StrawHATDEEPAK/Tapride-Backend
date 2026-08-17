@@ -164,5 +164,27 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks: [tapride-net]
 
-  # matching-service, notification-service will be added
-  # here on Day 3 / Day 6 as they're built.
+  matching-service:
+    build:
+      context: .
+      dockerfile: matching-service/Dockerfile
+    container_name: tapride-matching-service
+    depends_on:
+      matching-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://matching-db:5432/matching_db
+      SPRING_DATASOURCE_USERNAME: matching_user
+      SPRING_DATASOURCE_PASSWORD: matching_pass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks: [tapride-net]
+
+  # notification-service will be added here on Day 6.

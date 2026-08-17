@@ -65,9 +65,12 @@ public class RideService {
     public void handlePaymentAuthorized(UUID rideId, String correlationId) {
         Ride ride = getOrThrow(rideId);
         transition(ride, RideStatus.PAYMENT_AUTHORIZED, RideEventType.PAYMENT_AUTHORIZED, correlationId, Map.of());
-        // Immediately kick off the next saga stage: driver matching.
+        // Immediately kick off the next saga stage: driver matching. Carries
+        // pickup coordinates - matching-service has no other way to know where
+        // to search for nearby drivers (it never sees the original ride request).
         transition(ride, RideStatus.DRIVER_MATCHING, RideEventType.DRIVER_MATCH_REQUESTED,
-                correlationId, Map.of("rideId", rideId));
+                correlationId, Map.of("rideId", rideId,
+                        "pickupLat", ride.getPickupLat(), "pickupLng", ride.getPickupLng()));
     }
 
     @Transactional

@@ -69,7 +69,13 @@
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
                 </plugin>
-
+                <!-- Preserves parameter names in compiled bytecode (javac -parameters
+                     flag). Without this, Spring MVC can't resolve @PathVariable/@RequestParam
+                     by reflection unless every single one is explicitly named
+                     (e.g. @PathVariable("id")) - easy to forget and fails at
+                     REQUEST TIME, not compile time, which is exactly what happened
+                     here. Setting this once in the parent POM fixes it project-wide
+                     instead of hunting down every unnamed annotation individually. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>

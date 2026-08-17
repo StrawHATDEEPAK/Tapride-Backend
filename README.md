@@ -20,7 +20,10 @@ built around a ride-booking domain.
       Haversine-based mock fare estimation
 - [x] `payment-service`: mock payment authorization/refund, saga participant pattern,
       chaos-injectable failures (`/api/chaos`) for demoing the saga's compensation path
-- [ ] Day 3: `matching-service` + Redis geospatial matching + `DRIVER_LOCATION_UPDATED` ticks
+- [x] `matching-service`: Redis geospatial driver search (GEOADD/GEOSEARCH), chaos-injectable
+      match failures, and a scheduled `DriverLocationSimulator` that ticks matched drivers
+      toward pickup and publishes `DRIVER_LOCATION_UPDATED` events — groundwork for the
+      end-of-project live-map visualization, deferred but schema-ready now
 - [ ] Day 4: Resilience4j circuit breakers + `/chaos` endpoint polish + Testcontainers integration tests
 - [ ] Day 5: Observability stack (Prometheus/Grafana/Jaeger, correlated logs)
 - [ ] Day 6: Frontend — live order feed via WebSocket + chaos button
@@ -89,7 +92,40 @@ DRIVER_MATCHED, etc. — those aren't addressed to it).
 **order-service's `SagaEventListener` consumes that topic** and drives the ride
 state machine forward or into compensation accordingly.
 
-`matching-service` (Day 3) will follow the identical pattern on `tapride.matching.events`.
+`matching-service` (Day 3) follows the identical pattern on `tapride.matching.events`:
+publishes `DRIVER_MATCHED` (with `driverId`) or `DRIVER_MATCH_FAILED` in response to
+`DRIVER_MATCH_REQUESTED`, which now also carries `pickupLat`/`pickupLng` so the
+Redis geospatial search has something to search around.
+
+---
+
+## Driver matching (Day 3)
+
+`matching-service` seeds ~10 fake drivers on startup, scattered randomly around
+a configurable center point (defaults to Indore, matching this README's test
+coordinates), into both Postgres (`drivers` — static profile) and Redis
+(`drivers:available` / `drivers:location` — live GEO index). When a
+`DRIVER_MATCH_REQUESTED` event arrives, it runs a real `GEOSEARCH` for the
+nearest available driver within 5km, reserves them, and reports back.
+
+A `DriverLocationSimulator` scheduled task then ticks every matched driver's
+position toward the pickup point every few seconds, publishing
+`DRIVER_LOCATION_UPDATED` events — nothing consumes these yet (that's the
+Day 6 / end-of-project live-map work), but the data is flowing and ready.
+
+```bash
+# Check a match once a ride has been matched (status will be DRIVER_MATCHING -> DRIVER_MATCHED)
+curl http://localhost:8083/api/matches/by-ride/{rideId}
+
+# Run it again a few seconds later - currentLat/currentLng should have moved
+# closer to pickupLat/pickupLng
+curl http://localhost:8083/api/matches/by-ride/{rideId}
+
+# Force every match to fail (demos the DEEPER compensation path: payment
+# already succeeded, so order-service must refund before cancelling)
+curl -X PUT http://localhost:8083/api/chaos -H "Content-Type: application/json" -d '{"forceFailure": true}'
+curl http://localhost:8083/api/chaos/reset
+```
 
 ---
 
@@ -135,13 +171,15 @@ This is already configured in `docker-compose.yml` — just run:
 
 ```bash
 docker compose up -d order-db payment-db matching-db redis kafka kafka-ui
-docker compose up --build order-service payment-service
+docker compose up --build order-service payment-service matching-service
 ```
 
 - order-service: http://localhost:8081
 - payment-service: http://localhost:8082
-- Kafka UI: http://localhost:8090 (watch `tapride.ride.events` and
-  `tapride.payment.events` fill up as rides move through the saga)
+- matching-service: http://localhost:8083
+- Kafka UI: http://localhost:8090 (watch `tapride.ride.events`,
+  `tapride.payment.events`, and `tapride.matching.events` fill up as rides
+  move through the saga)
 
 - Kafka UI: http://localhost:8090
 - order-service: http://localhost:8081/api/rides
