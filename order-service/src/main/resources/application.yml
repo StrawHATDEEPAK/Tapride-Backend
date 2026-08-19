@@ -50,10 +50,7 @@ management:
         http.server.requests: true
   tracing:
     sampling:
-      # 0.0 until Jaeger is deployed (Day 5) - otherwise every request tries to
-      # export a span to a collector that doesn't exist yet and logs a noisy
-      # (harmless) connection-refused error. Bump back to 1.0 on Day 5.
-      probability: 0.0
+      probability: 1.0
   otlp:
     tracing:
       endpoint: http://localhost:4318/v1/traces
