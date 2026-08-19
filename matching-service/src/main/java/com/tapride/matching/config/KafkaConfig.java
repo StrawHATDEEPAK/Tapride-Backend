@@ -36,7 +36,15 @@ public class KafkaConfig {
 
     @Bean
     public KafkaTemplate<String, Object> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+       KafkaTemplate<String, Object> template = new KafkaTemplate<>(producerFactory());
+        // This is what actually stitches a single Jaeger trace across all 3
+        // services, even though they only ever talk via Kafka messages, never
+        // direct HTTP calls to each other. Without this, each service's work
+        // would show up as a separate, disconnected trace in Jaeger - you'd see
+        // "order-service did something" and "payment-service did something"
+        // with no visible link between them, defeating the point of tracing.
+        template.setObservationEnabled(true);
+        return template;
     }
 
     @Bean
@@ -55,6 +63,11 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        // The consumer-side half of the same fix - extracts the trace context
+        // that setObservationEnabled(true) on the producer embedded into the
+        // Kafka message headers, and continues the same trace here instead of
+        // starting a fresh, disconnected one.
+        factory.getContainerProperties().setObservationEnabled(true);
         return factory;
     }
 }
