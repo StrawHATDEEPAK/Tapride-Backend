@@ -3,6 +3,7 @@ package com.tapride.matching.domain;
 import com.tapride.matching.chaos.ChaosSettings;
 import com.tapride.matching.events.MatchEventPublisher;
 import com.tapride.matching.repository.DriverMatchRepository;
+import com.tapride.matching.domain.MatchNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.geo.Point;
@@ -84,6 +85,6 @@ public class MatchingService {
     @Transactional(readOnly = true)
     public DriverMatch getByRideId(UUID rideId) {
         return driverMatchRepository.findByRideId(rideId)
-                .orElseThrow(() -> new NoSuchElementException("No match found for ride: " + rideId));
+                .orElseThrow(() -> new MatchNotFoundException(rideId));
     }
 }

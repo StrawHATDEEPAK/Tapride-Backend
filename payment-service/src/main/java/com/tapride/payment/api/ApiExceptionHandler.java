@@ -14,8 +14,8 @@ import java.util.NoSuchElementException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(NoSuchElementException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException ex) {
+    @ExceptionHandler(PaymentNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(PaymentNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody(ex.getMessage()));
     }
 

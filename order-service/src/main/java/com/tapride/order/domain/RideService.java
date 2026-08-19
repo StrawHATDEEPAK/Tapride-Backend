@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tapride.order.domain.RideNotFoundException;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -133,7 +134,7 @@ public class RideService {
     @Transactional(readOnly = true)
     public Ride getOrThrow(UUID rideId) {
         return rideRepository.findById(rideId)
-                .orElseThrow(() -> new NoSuchElementException("Ride not found: " + rideId));
+                .orElseThrow(() -> new RideNotFoundException(rideId));
     }
 
     private void transition(Ride ride, RideStatus to, RideEventType eventType,
