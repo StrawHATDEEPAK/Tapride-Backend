@@ -67,6 +67,19 @@ resilience4j:
         wait-duration-in-open-state: 10s
         permitted-number-of-calls-in-half-open-state: 3
         automatic-transition-from-open-to-half-open-enabled: true
+        # A plain "ride not found" (404) must NOT count as a circuit-breaker
+        # failure - otherwise enough legitimate 404 lookups could trip the
+        # breaker for everyone. Only genuine infra/dependency trouble should count.
+        ignore-exceptions:
+          - com.tapride.order.domain.RideNotFoundException
+  retry:
+    instances:
+      rideLookup:
+        max-attempts: 3
+        wait-duration: 200ms
+        # Same reasoning - retrying a legitimate 404 three times is pointless.
+        ignore-exceptions:
+          - com.tapride.order.domain.RideNotFoundException
 
 logging:
   pattern:

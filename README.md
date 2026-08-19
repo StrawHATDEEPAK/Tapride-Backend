@@ -24,7 +24,10 @@ built around a ride-booking domain.
       match failures, and a scheduled `DriverLocationSimulator` that ticks matched drivers
       toward pickup and publishes `DRIVER_LOCATION_UPDATED` events — groundwork for the
       end-of-project live-map visualization, deferred but schema-ready now
-- [ ] Day 4: Resilience4j circuit breakers + `/chaos` endpoint polish + Testcontainers integration tests
+- [x] Day 4: `order-service` chaos hook + Resilience4j `@Retry`/`@CircuitBreaker` stacked on
+      the ride-lookup endpoint, fixed to ignore legitimate 404s (`NoSuchElementException`)
+      so normal traffic can't trip the breaker; real Testcontainers integration test
+      (Postgres + Kafka) proving the full request→validate→persist→publish chain
 - [ ] Day 5: Observability stack (Prometheus/Grafana/Jaeger, correlated logs)
 - [ ] Day 6: Frontend — live order feed via WebSocket + chaos button
 - [ ] Day 7: CI/CD, README polish, demo recording
@@ -150,6 +153,65 @@ curl http://localhost:8081/api/rides/{id}/events
 # Reset back to normal (15% random failure rate, no forced failures)
 curl -X POST http://localhost:8082/api/chaos/reset
 ```
+
+---
+
+## Resilience (Day 4): Retry + Circuit Breaker
+
+`GET /api/rides/{id}` has two Resilience4j layers stacked on it, both configured
+in `order-service/src/main/resources/application.yml` under `resilience4j.*`:
+
+1. **`@Retry`** — up to 3 attempts, 200ms apart, before giving up on a single request
+2. **`@CircuitBreaker`** — watches the failure rate across a sliding window of the
+   *last 10 requests*; if 50%+ fail, it trips OPEN for 10s and every request during
+   that window short-circuits straight to a 503 fallback instead of even trying —
+   protecting a struggling dependency from being hammered further
+
+**A real bug this caught and fixed**: by default, Resilience4j counts *every*
+exception as a failure — including a plain "ride not found." That would mean
+enough people innocently checking nonexistent ride IDs could trip the breaker
+for everyone. Fixed via `ignore-exceptions: [java.util.NoSuchElementException]`
+on both the retry and circuit-breaker config — a genuine 404 now bypasses both
+layers entirely and returns instantly, exactly as it should.
+
+Since `order-service` has no real external dependency call on this read path
+(it only reads its own database), a chaos hook (`ChaosSettings` /
+`ChaosController`) simulates one, purely so this config has something real to
+react to:
+
+```bash
+# Force every lookup to fail (simulated infra fault, NOT a 404)
+curl -X PUT http://localhost:8081/api/chaos -H "Content-Type: application/json" -d '{"forceFailure": true}'
+
+# Hit it a few times in a row - first few calls retry 3x then return 503;
+# after ~5 failures in the 10-request window, the breaker trips OPEN and
+# subsequent calls fail INSTANTLY (no retry delay) until it resets ~10s later
+curl -w "\n%{time_total}s\n" http://localhost:8081/api/rides/{any-id}
+
+# A genuine 404 during this whole time still returns instantly and correctly -
+# proving the ignore-exceptions fix works
+curl http://localhost:8081/api/rides/00000000-0000-0000-0000-000000000000
+
+curl -X POST http://localhost:8081/api/chaos/reset
+```
+
+---
+
+## Integration testing
+
+`OrderServiceIntegrationTest` uses real Testcontainers-managed Postgres and
+Kafka (not mocks) to prove the full chain works together: Flyway migrations
+apply cleanly, the HTTP layer accepts a request, `RideService` validates and
+persists it, and the saga's first events get published — all through actual
+infrastructure, not stubbed. Run it with:
+
+```bash
+cd order-service
+mvn test -Dtest=OrderServiceIntegrationTest
+```
+
+(Requires Docker running locally, since Testcontainers needs it to spin up
+the ephemeral Postgres/Kafka containers for the test's lifetime.)
 
 ---
 

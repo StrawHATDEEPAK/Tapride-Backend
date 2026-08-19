@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tapride.payment.domain.PaymentNotFoundException;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class PaymentService {
     @Transactional
     public void refund(UUID rideId, String correlationId) {
         Payment payment = paymentRepository.findByRideId(rideId)
-                .orElseThrow(() -> new NoSuchElementException("No payment found for ride: " + rideId));
+                .orElseThrow(() -> new PaymentNotFoundException(rideId));
 
         // Only a payment that actually succeeded can be refunded; if it already
         // failed there's nothing to reverse. Let the state machine enforce that
@@ -107,6 +108,6 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public Payment getByRideId(UUID rideId) {
         return paymentRepository.findByRideId(rideId)
-                .orElseThrow(() -> new NoSuchElementException("No payment found for ride: " + rideId));
+                .orElseThrow(() -> new PaymentNotFoundException(rideId));
     }
 }
