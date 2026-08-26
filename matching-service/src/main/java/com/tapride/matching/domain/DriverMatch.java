@@ -42,6 +42,12 @@ public class DriverMatch {
     @Column(nullable = false)
     private double pickupLng;
 
+    /** Second-leg destination - only relevant once status reaches EN_ROUTE_DROPOFF. */
+    @Column(nullable = false)
+    private double dropoffLat;
+    @Column(nullable = false)
+    private double dropoffLng;
+
     /** Simulated live position - moves toward pickupLat/pickupLng on each simulator tick. */
     @Column(nullable = false)
     private double currentLat;
@@ -54,16 +60,19 @@ public class DriverMatch {
     @Column(nullable = false)
     private Instant updatedAt;
 
+
     @Version
     private long version;
 
     public DriverMatch(UUID rideId, UUID driverId, double pickupLat, double pickupLng,
-                        double driverStartLat, double driverStartLng) {
+                        double dropoffLat, double dropoffLng, double driverStartLat, double driverStartLng) {
         this.rideId = rideId;
         this.driverId = driverId;
         this.status = MatchStatus.ASSIGNED;
         this.pickupLat = pickupLat;
         this.pickupLng = pickupLng;
+        this.dropoffLat = dropoffLat;
+        this.dropoffLng = dropoffLng;
         this.currentLat = driverStartLat;
         this.currentLng = driverStartLng;
         Instant now = Instant.now();
