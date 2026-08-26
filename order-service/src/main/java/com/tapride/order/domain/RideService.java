@@ -69,9 +69,10 @@ public class RideService {
         // Immediately kick off the next saga stage: driver matching. Carries
         // pickup coordinates - matching-service has no other way to know where
         // to search for nearby drivers (it never sees the original ride request).
-        transition(ride, RideStatus.DRIVER_MATCHING, RideEventType.DRIVER_MATCH_REQUESTED,
+                transition(ride, RideStatus.DRIVER_MATCHING, RideEventType.DRIVER_MATCH_REQUESTED,
                 correlationId, Map.of("rideId", rideId,
-                        "pickupLat", ride.getPickupLat(), "pickupLng", ride.getPickupLng()));
+                        "pickupLat", ride.getPickupLat(), "pickupLng", ride.getPickupLng(),
+                        "dropoffLat", ride.getDropoffLat(), "dropoffLng", ride.getDropoffLng()));
     }
 
     @Transactional

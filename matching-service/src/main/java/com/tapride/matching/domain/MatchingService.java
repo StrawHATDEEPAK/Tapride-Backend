@@ -3,7 +3,6 @@ package com.tapride.matching.domain;
 import com.tapride.matching.chaos.ChaosSettings;
 import com.tapride.matching.events.MatchEventPublisher;
 import com.tapride.matching.repository.DriverMatchRepository;
-import com.tapride.matching.domain.MatchNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.geo.Point;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 /**
@@ -37,7 +35,8 @@ public class MatchingService {
     private final ChaosSettings chaosSettings;
 
     @Transactional
-    public void requestMatch(UUID rideId, double pickupLat, double pickupLng, String correlationId) {
+    public void requestMatch(UUID rideId, double pickupLat, double pickupLng,
+                              double dropoffLat, double dropoffLng, String correlationId) {
         // Idempotency guard - same rationale as PaymentService.authorize: Kafka
         // is at-least-once delivery, a saga participant must tolerate redelivery.
         if (driverMatchRepository.findByRideId(rideId).isPresent()) {
@@ -74,7 +73,7 @@ public class MatchingService {
         driverLocationIndex.markBusy(driverId);
 
         DriverMatch match = new DriverMatch(rideId, driverId, pickupLat, pickupLng,
-                driverStart.getY(), driverStart.getX());
+                dropoffLat, dropoffLng, driverStart.getY(), driverStart.getX());
         driverMatchRepository.save(match);
 
         eventPublisher.appendAndPublish(rideId, MatchEventType.DRIVER_MATCHED, correlationId,

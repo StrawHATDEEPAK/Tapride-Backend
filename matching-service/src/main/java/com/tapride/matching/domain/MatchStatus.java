@@ -1,16 +1,14 @@
 package com.tapride.matching.domain;
 
 /**
- * Tracks the DRIVER's journey for a ride - a narrower, more physical lifecycle
- * than order-service's RideStatus. order-service owns "is this ride still
- * happening"; matching-service owns "where is the driver right now". The two
- * are related but deliberately not the same state machine - matching-service
- * has no opinion on payment or the ride's business rules, only on assignment
- * and physical position.
+ * Full driver journey for a ride: two legs (to pickup, then to dropoff),
+ * matching the ride's actual lifecycle rather than stopping at pickup.
  */
 public enum MatchStatus {
-    ASSIGNED,       // driver picked, not yet moving (initial tick hasn't run)
-    EN_ROUTE,       // simulated location is ticking toward the pickup point
-    ARRIVED,        // simulated driver has reached the pickup point - terminal for matching-service's purposes
-    CANCELLED       // match failed or the ride was cancelled mid-match
+    ASSIGNED,             // driver picked, not yet moving
+    EN_ROUTE_PICKUP,      // simulated location ticking toward pickup
+    ARRIVED_PICKUP,       // reached pickup - triggers order-service's startRide()
+    EN_ROUTE_DROPOFF,     // second leg - ticking toward dropoff
+    COMPLETED,            // reached dropoff - triggers order-service's completeRide(); driver returns to available pool
+    CANCELLED
 }
