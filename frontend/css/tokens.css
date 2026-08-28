@@ -1,0 +1,54 @@
+/* ============================================================
+   TapRide — "Night Dispatch" design tokens
+   Change a value here, it ripples everywhere. Nothing below this
+   file should hardcode a color or font — always reference a token.
+   ============================================================ */
+
+:root {
+    /* --- Color: each one does a specific job, not decoration --- */
+    --color-bg:            #14182B; /* Night Indigo - page background */
+    --color-panel:         #1F2540; /* Panel Slate - card/panel surfaces */
+    --color-panel-raised:  #262C4A; /* one step lighter - hover/active panel states */
+    --color-border:        #2E3557; /* hairline borders between zones */
+
+    --color-amber:         #F2A340; /* Dispatch Amber - primary accent, "in progress" */
+    --color-amber-dim:     #8A6229; /* amber at low emphasis (unlit ladder stops) */
+    --color-teal:          #3FB8AF; /* Signal Teal - routes, "completed" */
+    --color-teal-dim:      #1F6B65;
+    --color-coral:         #E8604C; /* Alert Coral - failure/cancelled/chaos */
+    --color-coral-dim:     #7A3229;
+
+    --color-text:          #EDEBE4; /* Paper - primary text */
+    --color-text-dim:      #9CA0B8; /* secondary/muted text */
+    --color-text-faint:    #656B8C; /* placeholder/disabled */
+
+    /* --- Type --- */
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body:    'Inter', sans-serif;
+    --font-mono:    'IBM Plex Mono', monospace;
+
+    --text-xs:   0.75rem;
+    --text-sm:   0.875rem;
+    --text-base: 1rem;
+    --text-lg:   1.25rem;
+    --text-xl:   1.75rem;
+    --text-2xl:  2.5rem;
+
+    /* --- Spacing scale --- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+
+    /* --- Shape / motion --- */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --duration-fast: 150ms;
+    --duration-medium: 400ms;
+    --duration-slow: 4000ms; /* used for marker glide between simulator ticks */
+}
