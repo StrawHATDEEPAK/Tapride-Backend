@@ -1,0 +1,59 @@
+.console {
+    display: grid;
+    grid-template-columns: 320px 1fr 340px;
+    grid-template-rows: 100vh;
+    gap: 1px; /* the gap itself becomes a hairline border via bg color */
+    background: var(--color-border);
+}
+
+.zone {
+    background: var(--color-bg);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.zone--dispatch {
+    padding: var(--space-5);
+    gap: var(--space-6);
+}
+
+.zone--map {
+    padding: 0;
+    position: relative;
+}
+
+.zone--detail {
+    padding: var(--space-5);
+    gap: var(--space-5);
+}
+
+.zone-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+
+.zone-title {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-dim);
+}
+
+/* Responsive: below ~1000px, stack into a single scrolling column rather
+   than trying to cram 3 panels side by side. */
+@media (max-width: 1000px) {
+    .console {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+    }
+    .zone--map {
+        height: 60vh;
+    }
+    .zone {
+        overflow-y: visible;
+    }
+}

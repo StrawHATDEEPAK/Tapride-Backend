@@ -50,9 +50,7 @@ management:
         http.server.requests: true
   tracing:
     sampling:
-      # 0.0 until Jaeger is deployed (Day 5) - see order-service's application.yml
-      # for the same fix and rationale.
-      probability: 0.0
+      probability: 1.0
   otlp:
     tracing:
       endpoint: http://localhost:4318/v1/traces

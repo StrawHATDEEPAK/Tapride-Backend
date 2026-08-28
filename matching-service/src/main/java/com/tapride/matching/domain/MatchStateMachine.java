@@ -13,10 +13,12 @@ public class MatchStateMachine {
     private static final Map<MatchStatus, Set<MatchStatus>> TRANSITIONS = new EnumMap<>(MatchStatus.class);
 
     static {
-        TRANSITIONS.put(MatchStatus.ASSIGNED, EnumSet.of(MatchStatus.EN_ROUTE, MatchStatus.CANCELLED));
-        TRANSITIONS.put(MatchStatus.EN_ROUTE, EnumSet.of(MatchStatus.ARRIVED, MatchStatus.CANCELLED));
-        TRANSITIONS.put(MatchStatus.ARRIVED, EnumSet.noneOf(MatchStatus.class));      // terminal
-        TRANSITIONS.put(MatchStatus.CANCELLED, EnumSet.noneOf(MatchStatus.class));    // terminal
+        TRANSITIONS.put(MatchStatus.ASSIGNED, EnumSet.of(MatchStatus.EN_ROUTE_PICKUP, MatchStatus.CANCELLED));
+        TRANSITIONS.put(MatchStatus.EN_ROUTE_PICKUP, EnumSet.of(MatchStatus.ARRIVED_PICKUP, MatchStatus.CANCELLED));
+        TRANSITIONS.put(MatchStatus.ARRIVED_PICKUP, EnumSet.of(MatchStatus.EN_ROUTE_DROPOFF, MatchStatus.CANCELLED));
+        TRANSITIONS.put(MatchStatus.EN_ROUTE_DROPOFF, EnumSet.of(MatchStatus.COMPLETED, MatchStatus.CANCELLED));
+        TRANSITIONS.put(MatchStatus.COMPLETED, EnumSet.noneOf(MatchStatus.class));   // terminal
+        TRANSITIONS.put(MatchStatus.CANCELLED, EnumSet.noneOf(MatchStatus.class));   // terminal
     }
 
     public void assertTransitionAllowed(MatchStatus from, MatchStatus to) {

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tapride.order.domain.RideNotFoundException;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -68,9 +69,10 @@ public class RideService {
         // Immediately kick off the next saga stage: driver matching. Carries
         // pickup coordinates - matching-service has no other way to know where
         // to search for nearby drivers (it never sees the original ride request).
-        transition(ride, RideStatus.DRIVER_MATCHING, RideEventType.DRIVER_MATCH_REQUESTED,
+                transition(ride, RideStatus.DRIVER_MATCHING, RideEventType.DRIVER_MATCH_REQUESTED,
                 correlationId, Map.of("rideId", rideId,
-                        "pickupLat", ride.getPickupLat(), "pickupLng", ride.getPickupLng()));
+                        "pickupLat", ride.getPickupLat(), "pickupLng", ride.getPickupLng(),
+                        "dropoffLat", ride.getDropoffLat(), "dropoffLng", ride.getDropoffLng()));
     }
 
     @Transactional
@@ -133,7 +135,7 @@ public class RideService {
     @Transactional(readOnly = true)
     public Ride getOrThrow(UUID rideId) {
         return rideRepository.findById(rideId)
-                .orElseThrow(() -> new NoSuchElementException("Ride not found: " + rideId));
+                .orElseThrow(() -> new RideNotFoundException(rideId));
     }
 
     private void transition(Ride ride, RideStatus to, RideEventType eventType,

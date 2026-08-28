@@ -18,3 +18,7 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+**/effective-pom.xml
+# Frontend - contains your personal Mapbox token, never commit
+frontend/js/config.js

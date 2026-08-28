@@ -64,13 +64,14 @@ public class SagaEventListener {
                         rideId, UUID.fromString(node.get("driverId").asText()), correlationId);
                 case "DRIVER_MATCH_FAILED" -> rideService.handleMatchFailed(
                         rideId, node.path("reason").asText("unspecified"), correlationId);
-                 case "DRIVER_LOCATION_UPDATED", "DRIVER_ARRIVED" -> {
-                    // Expected, frequent events - matching-service publishes these for a
+                case "DRIVER_ARRIVED" -> rideService.startRide(rideId, correlationId);
+                case "TRIP_COMPLETED" -> rideService.completeRide(rideId, correlationId);
+                case "DRIVER_LOCATION_UPDATED" -> {
+                    // Expected, frequent event - matching-service publishes this for a
                     // future frontend/notification-service to consume (live driver
-                    // tracking), not for the saga orchestrator. order-service genuinely
-                    // has nothing to do here; this is a deliberate no-op, not a gap.
+                    // tracking), not for the saga orchestrator. Deliberate no-op.
                 }
-                default -> log.warn("Unhandled matching event type: {}", type);
+                default -> log.warn("Unrecognized matching event type: {}", type);
             }
         } catch (Exception e) {
             log.error("Failed to process matching event: {}", rawMessage, e);

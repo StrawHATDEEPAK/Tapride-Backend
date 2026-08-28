@@ -33,8 +33,11 @@ public class RideEventConsumer {
                 JsonNode payload = objectMapper.readTree(envelope.payloadJson());
                 double pickupLat = payload.get("pickupLat").asDouble();
                 double pickupLng = payload.get("pickupLng").asDouble();
+                double dropoffLat = payload.get("dropoffLat").asDouble();
+                double dropoffLng = payload.get("dropoffLng").asDouble();
 
-                matchingService.requestMatch(rideId, pickupLat, pickupLng, envelope.correlationId());
+                matchingService.requestMatch(rideId, pickupLat, pickupLng,
+                        dropoffLat, dropoffLng, envelope.correlationId());
             }
             // Every other ride event type (RIDE_REQUESTED, PAYMENT_AUTHORIZED,
             // etc.) isn't addressed to matching-service - silently ignored.

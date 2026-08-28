@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 /**
@@ -36,7 +35,8 @@ public class MatchingService {
     private final ChaosSettings chaosSettings;
 
     @Transactional
-    public void requestMatch(UUID rideId, double pickupLat, double pickupLng, String correlationId) {
+    public void requestMatch(UUID rideId, double pickupLat, double pickupLng,
+                              double dropoffLat, double dropoffLng, String correlationId) {
         // Idempotency guard - same rationale as PaymentService.authorize: Kafka
         // is at-least-once delivery, a saga participant must tolerate redelivery.
         if (driverMatchRepository.findByRideId(rideId).isPresent()) {
@@ -73,7 +73,7 @@ public class MatchingService {
         driverLocationIndex.markBusy(driverId);
 
         DriverMatch match = new DriverMatch(rideId, driverId, pickupLat, pickupLng,
-                driverStart.getY(), driverStart.getX());
+                dropoffLat, dropoffLng, driverStart.getY(), driverStart.getX());
         driverMatchRepository.save(match);
 
         eventPublisher.appendAndPublish(rideId, MatchEventType.DRIVER_MATCHED, correlationId,
@@ -84,6 +84,6 @@ public class MatchingService {
     @Transactional(readOnly = true)
     public DriverMatch getByRideId(UUID rideId) {
         return driverMatchRepository.findByRideId(rideId)
-                .orElseThrow(() -> new NoSuchElementException("No match found for ride: " + rideId));
+                .orElseThrow(() -> new MatchNotFoundException(rideId));
     }
 }
