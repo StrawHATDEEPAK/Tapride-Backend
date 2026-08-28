@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TapRide — Dispatch Console</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div class="console">
+
+    <!-- ZONE 1: Dispatch - book a ride, see all active rides -->
+    <aside class="zone zone--dispatch">
+        <div>
+            <h1 style="font-size: var(--text-lg); margin-bottom: var(--space-1);">TapRide</h1>
+            <p class="text-faint" style="font-size: var(--text-xs);">Dispatch console</p>
+        </div>
+
+        <section id="booking-section">
+            <div class="zone-header">
+                <span class="zone-title">Book a ride</span>
+            </div>
+
+            <div class="preset-row" id="preset-row">
+                <!-- populated by booking-form.js -->
+            </div>
+
+            <form id="booking-form">
+                <div class="field-row">
+                    <div class="field">
+                        <label for="pickup-lat">Pickup lat</label>
+                        <input type="number" step="0.0001" id="pickup-lat" required>
+                    </div>
+                    <div class="field">
+                        <label for="pickup-lng">Pickup lng</label>
+                        <input type="number" step="0.0001" id="pickup-lng" required>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="dropoff-lat">Dropoff lat</label>
+                        <input type="number" step="0.0001" id="dropoff-lat" required>
+                    </div>
+                    <div class="field">
+                        <label for="dropoff-lng">Dropoff lng</label>
+                        <input type="number" step="0.0001" id="dropoff-lng" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn--primary btn--full">Book ride</button>
+            </form>
+        </section>
+
+        <section id="active-rides-section" style="flex: 1;">
+            <div class="zone-header">
+                <span class="zone-title">Active rides</span>
+                <span class="text-faint mono" id="ride-count" style="font-size: var(--text-xs);">0</span>
+            </div>
+            <div class="ride-list" id="ride-list">
+                <p class="empty-state">No rides yet — book one above to see it appear here live.</p>
+            </div>
+        </section>
+    </aside>
+
+    <!-- ZONE 2: Map - the hero -->
+    <main class="zone zone--map">
+        <div class="map-overlay-title">
+            <span class="dot"></span>
+            Live tracking
+        </div>
+        <div id="map"></div>
+    </main>
+
+    <!-- ZONE 3: Selected ride detail + chaos controls -->
+    <aside class="zone zone--detail">
+        <section id="detail-section">
+            <div class="zone-header">
+                <span class="zone-title">Ride detail</span>
+            </div>
+            <div id="ride-detail">
+                <p class="empty-state">Select a ride from the list to see its saga unfold here.</p>
+            </div>
+        </section>
+
+        <section id="chaos-section">
+            <div class="zone-header">
+                <span class="zone-title">Chaos controls</span>
+            </div>
+            <div id="chaos-panel">
+                <!-- populated by chaos-panel.js -->
+            </div>
+        </section>
+    </aside>
+
+</div>
+
+<!-- CDN deps: not ES modules, so loaded as plain globals before our own code -->
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
