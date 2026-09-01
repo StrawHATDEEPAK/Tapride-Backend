@@ -11,6 +11,9 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,18 +30,22 @@ public class KafkaConfig {
         Map<String, Object> config = new HashMap<>();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-        // Idempotent producer: prevents duplicate events on retry, important since
-        // saga steps are triggered by these events and must not double-fire.
         config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
-        // Don't add a "__TypeId__" header with order-service's internal Java class
-        // name. Other services (payment-service, matching-service) parse these
-        // messages as plain JSON and have no knowledge of order-service's types -
-        // keeping the wire format class-agnostic is what actually decouples the
-        // services, not just having separate codebases.
         config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
-        return new DefaultKafkaProducerFactory<>(config);
+
+        // Kafka instantiates a class-configured serializer via reflection,
+        // bypassing Spring Boot's autoconfigured ObjectMapper entirely - that
+        // default instance lacks JavaTimeModule and writes java.time.Instant
+        // as a raw numeric epoch timestamp instead of an ISO-8601 string,
+        // which then confuses every downstream JSON consumer. Constructing
+        // the serializer explicitly with a properly configured ObjectMapper
+        // fixes this at the source.
+        ObjectMapper kafkaObjectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        return new DefaultKafkaProducerFactory<>(config, new StringSerializer(), new JsonSerializer<>(kafkaObjectMapper));
     }
 
     @Bean
