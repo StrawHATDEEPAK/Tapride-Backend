@@ -1,0 +1,76 @@
+# Single entrypoint for the whole app - the same architectural role your
+# blueprint's "API Gateway pattern" bullet calls for, fulfilled here by
+# Ingress + nginx-ingress's path rewriting rather than a hand-rolled Spring
+# Cloud Gateway service (a legitimate, common substitution for something
+# this simple: pure routing, no custom auth/business logic).
+#
+# TWO Ingress resources, not one - nginx-ingress's rewrite-target annotation
+# applies to the WHOLE Ingress, not per-path. The /order-api, /payment-api,
+# /matching-api routes need their prefix STRIPPED before reaching the backend
+# (order-service itself only knows about /api/rides, not /order-api/api/rides).
+# But notification-service's WebSocket endpoint is already registered AT
+# "/ws" (see notification-service's WebSocketConfig) - if we stripped that
+# prefix too, SockJS's /ws/info request would arrive as /info and 404.
+# So /ws and / get their own Ingress with no rewrite at all.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tapride-api-ingress
+  namespace: tapride
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - tapride.local
+      secretName: tapride-tls-secret
+  rules:
+    - host: tapride.local # ADDED: Host rule for explicit SNI matching
+      http:
+        paths:
+          - path: /order-api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service: { name: order-service, port: { number: 8080 } }
+          - path: /payment-api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service: { name: payment-service, port: { number: 8080 } }
+          - path: /matching-api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service: { name: matching-service, port: { number: 8080 } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tapride-web-ingress
+  namespace: tapride
+  annotations:
+    # WebSocket connections are long-lived - the default proxy timeout would
+    # silently kill notification-service's connections after ~60s.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true" #for ssl redirects
+  
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - tapride.local
+      secretName: tapride-tls-secret
+  rules:
+    - host: tapride.local # ADDED: Host rule for explicit SNI matching  
+      http:
+        paths:
+          # No rewrite - notification-service's endpoint IS "/ws", matching exactly.
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service: { name: notification-service, port: { number: 8080 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: frontend, port: { number: 80 } }

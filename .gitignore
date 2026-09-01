@@ -22,3 +22,20 @@ Thumbs.db
 **/effective-pom.xml
 # Frontend - contains your personal Mapbox token, never commit
 frontend/js/config.js
+
+
+# Security & TLS Keys
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# Environment & Credentials
+.env
+.env.*
+!.env.example
+
+# Kubernetes Secrets with live data
+*secret.yaml
+!*secret.example.yaml
