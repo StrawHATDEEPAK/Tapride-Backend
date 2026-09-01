@@ -1,6 +1,9 @@
-// Copy this file to config.js and fill in your own values.
-// config.js is gitignored - config.example.js (this file) is the only one committed.
+// Copy this file to config.js. No API keys needed anywhere in this config -
+// OpenFreeMap (tiles) and Nominatim (search) are both free and keyless.
 export const CONFIG = {
+    // OpenFreeMap - no token, no signup, no card, unlimited use, sponsored by
+    // Cloudflare. Other styles available: liberty, positron, bright, fiord -
+    // see https://openfreemap.org
     MAP_STYLE_URL: 'https://tiles.openfreemap.org/styles/dark',
 
     API: {
@@ -10,17 +13,11 @@ export const CONFIG = {
         NOTIFICATION_WS: 'http://localhost:8084/ws',
     },
 
+    // Fallback center/zoom ONLY used if the browser denies/lacks geolocation -
+    // otherwise the map centers on the user's real location automatically.
     MAP: {
         centerLat: 22.7196, // Indore, MP - matches the backend's seeded driver fleet
         centerLng: 75.8577,
         zoom: 12,
     },
-
-    // Quick-fill buttons on the booking form - all within the seeded driver
-    // fleet's radius (see matching-service's DriverSeeder).
-    PRESETS: [
-        { label: 'Airport → Downtown', pickup: { lat: 22.7216, lng: 75.8011 }, dropoff: { lat: 22.7196, lng: 75.8577 } },
-        { label: 'Downtown → Rajwada', pickup: { lat: 22.7196, lng: 75.8577 }, dropoff: { lat: 22.7180, lng: 75.8560 } },
-        { label: 'Vijay Nagar → Airport', pickup: { lat: 22.7530, lng: 75.8937 }, dropoff: { lat: 22.7216, lng: 75.8011 } },
-    ],
 };

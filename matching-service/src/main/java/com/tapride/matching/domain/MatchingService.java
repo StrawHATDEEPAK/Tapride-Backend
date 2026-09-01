@@ -29,6 +29,7 @@ public class MatchingService {
     private static final double SEARCH_RADIUS_KM = 5.0;
 
     private final DriverMatchRepository driverMatchRepository;
+    private final com.tapride.matching.repository.DriverRepository driverRepository;
     private final MatchStateMachine stateMachine;
     private final MatchEventPublisher eventPublisher;
     private final DriverLocationIndex driverLocationIndex;
@@ -55,7 +56,19 @@ public class MatchingService {
             return;
         }
 
-        var nearestDriver = driverLocationIndex.findNearestAvailableDriver(pickupLat, pickupLng, SEARCH_RADIUS_KM);
+                var nearestDriver = driverLocationIndex.findNearestAvailableDriver(pickupLat, pickupLng, SEARCH_RADIUS_KM);
+
+        // No driver already near this pickup - rather than failing (the
+        // fleet was only ever seeded around one fixed demo city, but real
+        // bookings can now come from anywhere via search/geolocation), grow
+        // the fleet on the spot. This keeps "no drivers available" as
+        // something you only see via deliberate chaos injection, not as an
+        // artifact of testing from a different city than the seed data.
+        if (nearestDriver.isEmpty()) {
+            spawnDriverNear(pickupLat, pickupLng);
+            nearestDriver = driverLocationIndex.findNearestAvailableDriver(pickupLat, pickupLng, SEARCH_RADIUS_KM);
+        }
+
         if (nearestDriver.isEmpty()) {
             eventPublisher.appendAndPublish(rideId, MatchEventType.DRIVER_MATCH_FAILED, correlationId,
                     Map.of("reason", "no_drivers_within_radius"));
@@ -79,6 +92,26 @@ public class MatchingService {
         eventPublisher.appendAndPublish(rideId, MatchEventType.DRIVER_MATCHED, correlationId,
                 Map.of("driverId", driverId));
         log.info("Ride {} matched to driver {} [correlationId={}]", rideId, driverId, correlationId);
+    }
+
+        private static final java.util.List<String> SPAWN_NAMES = java.util.List.of(
+            "Aditya", "Meera", "Sanjay", "Pooja", "Rakesh");
+    private static final java.util.List<String> SPAWN_VEHICLES = java.util.List.of(
+            "Hatchback", "Sedan", "SUV");
+
+    /** Grows the fleet near a pickup point that had no nearby available driver. */
+    private void spawnDriverNear(double lat, double lng) {
+        var rnd = java.util.concurrent.ThreadLocalRandom.current();
+        double offsetKm = 1.5; // close enough to arrive quickly, far enough to still "approach"
+        double dLat = (rnd.nextDouble() - 0.5) * 2 * offsetKm / 111.0;
+        double dLng = (rnd.nextDouble() - 0.5) * 2 * offsetKm / (111.0 * Math.cos(Math.toRadians(lat)));
+
+        var driver = new Driver(java.util.UUID.randomUUID(),
+                SPAWN_NAMES.get(rnd.nextInt(SPAWN_NAMES.size())),
+                SPAWN_VEHICLES.get(rnd.nextInt(SPAWN_VEHICLES.size())));
+        driverRepository.save(driver);
+        driverLocationIndex.markAvailable(driver.getId(), lat + dLat, lng + dLng);
+        log.info("Spawned driver {} near ({}, {}) - no existing driver was in range", driver.getId(), lat, lng);
     }
 
     @Transactional(readOnly = true)
