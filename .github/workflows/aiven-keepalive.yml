@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Ping Kafka via REST Proxy
         run: |
-          curl -sf -X POST "${{ secrets.AIVEN_KAFKA_REST_URL }}/topics/" \
+          curl -sf -X POST "${{ secrets.AIVEN_KAFKA_REST_URL }}/topics/tapride.heartbeat" \
             -H "Content-Type: application/vnd.kafka.json.v2+json" \
             -u "${{ secrets.AIVEN_KAFKA_USER }}:${{ secrets.AIVEN_KAFKA_PASSWORD }}" \
             -d '{"records":[{"value":{"ping":"keepalive","source":"github-actions"}}]}'
