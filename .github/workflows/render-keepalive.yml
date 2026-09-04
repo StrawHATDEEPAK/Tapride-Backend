@@ -1,0 +1,31 @@
+name: Render Keep-Alive
+
+# Render's free tier sleeps a service after just 15 minutes of inactivity -
+# a MUCH tighter window than Aiven's 24 hours (see aiven-keepalive.yml),
+# which is why this is a separate workflow with its own, much more frequent
+# schedule rather than combined into that one.
+#
+# Honest limitation: this reduces cold starts, it doesn't guarantee zero -
+# GitHub's own scheduler doesn't promise exact timing under load, and GitHub
+# auto-disables scheduled workflows after 60 days with no commits to the
+# repo (a real, documented GitHub Actions behavior - keep committing, or
+# re-enable manually from the Actions tab if this ever silently stops).
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes - comfortably under Render's 15-min sleep threshold
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping all 5 Render services
+        run: |
+          curl -sf https://tapride-order-service.onrender.com/actuator/health || true
+          curl -sf https://tapride-payment-service.onrender.com/actuator/health || true
+          curl -sf https://tapride-matching-service.onrender.com/actuator/health || true
+          curl -sf https://tapride-notification-service.onrender.com/actuator/health || true
+          curl -sf https://tapride-frontend.onrender.com/ || true
+        # `|| true` on each line deliberately - one service being briefly down
+        # (e.g. mid-deploy) shouldn't fail the whole job and skip pinging the
+        # other 4.
