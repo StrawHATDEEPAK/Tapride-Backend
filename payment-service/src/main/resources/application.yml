@@ -14,7 +14,7 @@ spring:
     username: payment_user
     password: payment_pass
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 3
 
   jpa:
     hibernate:

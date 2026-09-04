@@ -14,7 +14,7 @@ spring:
     username: matching_user
     password: matching_pass
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 3
 
   jpa:
     hibernate:
