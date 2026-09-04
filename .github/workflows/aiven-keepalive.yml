@@ -1,0 +1,26 @@
+name: Aiven Keep-Alive
+
+# Both Aiven Kafka and Aiven Postgres free-tier services auto-shutdown after
+# 24 hours with no activity. A public demo can't guarantee steady visitor
+# traffic, so this pings both on a schedule comfortably under that threshold.
+# See infra/aiven/README.md for full context.
+on:
+  schedule:
+    - cron: '0 */12 * * *'   # every 12 hours
+  workflow_dispatch: {}        # allows a manual run from the Actions tab, useful for testing
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Kafka via REST Proxy
+        run: |
+          curl -sf -X POST "${{ secrets.AIVEN_KAFKA_REST_URL }}/topics/tapride.heartbeat" \
+            -H "Content-Type: application/vnd.kafka.json.v2+json" \
+            -u "${{ secrets.AIVEN_KAFKA_USER }}:${{ secrets.AIVEN_KAFKA_PASSWORD }}" \
+            -d '{"records":[{"value":{"ping":"keepalive","source":"github-actions"}}]}'
+
+      - name: Ping Postgres
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -yqq postgresql-client
+          psql "${{ secrets.AIVEN_POSTGRES_URL }}" -c "SELECT 1;"

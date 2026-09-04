@@ -1,0 +1,33 @@
+# Targets matching-service specifically because it's the most CPU-variable
+# service under load - Redis GEOSEARCH queries and the DriverLocationSimulator's
+# scheduled ticking both scale with the number of concurrent active rides,
+# unlike order-service (mostly I/O-bound DB writes) or payment-service (a
+# fixed-cost mock authorization per request).
+#
+# To demo this scaling for real: generate load against POST /order-api/api/rides
+# (e.g. with k6 or a simple loop script) and watch `kubectl get hpa -n tapride -w`
+# show replica count climb as CPU utilization crosses the target.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: matching-service-hpa
+  namespace: tapride
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: matching-service
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleDown:
+      # Don't scale back down immediately after a load spike passes - avoids
+      # flapping (scale up, down, up again) during a bursty demo.
+      stabilizationWindowSeconds: 120

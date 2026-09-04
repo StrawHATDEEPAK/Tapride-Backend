@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# kind loads locally-built images directly into the cluster's node (via
+# `kind load docker-image`) rather than pulling from a registry - Never
+# forces kubelet to use exactly that loaded image instead of trying (and
+# failing) to pull tapride/order-service:latest from Docker Hub, where it
+# doesn't exist. Only patches OUR 5 custom images - postgres/redis/kafka
+# stay on their default pull policy since those genuinely come from a registry.
+patches:
+  - target: { kind: Deployment, name: order-service }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target: { kind: Deployment, name: payment-service }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target: { kind: Deployment, name: matching-service }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target: { kind: Deployment, name: notification-service }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target: { kind: Deployment, name: frontend }
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
