@@ -29,7 +29,7 @@ spring:
     locations: classpath:db/migration
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
 
   jackson:
     default-property-inclusion: non_null
