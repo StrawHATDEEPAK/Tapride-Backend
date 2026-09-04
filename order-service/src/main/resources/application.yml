@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   application:
@@ -10,9 +10,9 @@ spring:
       enabled: true   # Java 21 virtual threads - blocking-style code, scalable I/O
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/order_db
-    username: order_user
-    password: order_pass
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
       maximum-pool-size: 3
 
@@ -29,7 +29,7 @@ spring:
     locations: classpath:db/migration
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
 
   jackson:
     default-property-inclusion: non_null
